@@ -5,7 +5,7 @@
 
 import Store from 'electron-store'
 
-const store = new Store()
+export const store = new Store()
 
 const MOCK_SUMMARY = `本次会议明确了 Q3 目标：
 ① 完成 MVP 核心功能开发

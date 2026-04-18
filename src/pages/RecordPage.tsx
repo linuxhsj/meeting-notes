@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { TranscriptSegment } from '../shared/types'
+import { MockASR, type ASRSegment } from '../asr/mock-asr'
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -21,9 +21,12 @@ export default function RecordPage() {
   const [elapsed, setElapsed] = useState(0)
   const [speakerCount, setSpeakerCount] = useState(0)
   const [segmentCount, setSegmentCount] = useState(0)
-  const [segments, setSegments] = useState<TranscriptSegment[]>([])
+  const [segments, setSegments] = useState<ASRSegment[]>([])
   const [errorMsg, setErrorMsg] = useState('')
+  const [asrMsg, setAsrMsg] = useState('')
   const transcriptRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const asrRef = useRef<MockASR | null>(null)
 
   // 滚动到底部
   useEffect(() => {
@@ -32,37 +35,54 @@ export default function RecordPage() {
     }
   }, [segments])
 
-  // 监听 IPC 事件
-  useEffect(() => {
-    const api = window.electronAPI
-    if (!api) return
-
-    api.onRecordingStateChange((state) => {
-      setRecState(state.state as 'idle' | 'recording' | 'error')
-      setElapsed(state.elapsed)
-      setSpeakerCount(state.speakerCount)
-      setSegmentCount(state.segmentCount)
-      if (state.errorMsg) setErrorMsg(state.errorMsg)
-    })
-
-    api.onTranscriptSegment((seg) => {
-      setSegments((prev) => [...prev, seg])
-    })
-
-    return () => api.removeAllListeners()
-  }, [])
-
   const startRecording = useCallback(() => {
     setSegments([])
     setElapsed(0)
     setSpeakerCount(0)
     setSegmentCount(0)
     setErrorMsg('')
-    window.electronAPI?.startRecording()
+    setRecState('recording')
+
+    // 启动 MockASR
+    asrRef.current = new MockASR()
+    asrRef.current.start(
+      'mock-key', // 模拟不需要真实 Key
+      (seg) => {
+        setSegments((prev) => [...prev, seg])
+        setSegmentCount((n) => n + 1)
+      },
+      (state, msg) => {
+        if (state === 'listening') setAsrMsg('● 实时识别中')
+        else if (state === 'not-available') setAsrMsg('⚠ ' + (msg || 'ASR 不可用'))
+        else if (state === 'error') setAsrMsg('⚠ ' + (msg || 'ASR 错误'))
+        else setAsrMsg(msg || '')
+      }
+    )
+
+    // 计时器
+    timerRef.current = setInterval(() => {
+      setElapsed((e) => e + 1)
+      setSpeakerCount(3) // 模拟 3 个说话人
+    }, 1000)
   }, [])
 
   const stopRecording = useCallback(() => {
-    window.electronAPI?.stopRecording()
+    asrRef.current?.stop()
+    asrRef.current = null
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setRecState('idle')
+    setAsrMsg('')
+  }, [])
+
+  // 清理
+  useEffect(() => {
+    return () => {
+      asrRef.current?.stop()
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   }, [])
 
   // --- 空闲状态 ---
@@ -71,6 +91,7 @@ export default function RecordPage() {
       <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
         <div className="text-6xl opacity-40">🎤</div>
         <div className="text-text-secondary text-sm">未在录制</div>
+        <div className="text-xs text-text-muted mb-2">ASR 模式：模拟数据（真实 ASR V2 接入中）</div>
         <button
           onClick={startRecording}
           className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
@@ -113,6 +134,9 @@ export default function RecordPage() {
       <div className="flex items-center gap-3 bg-primary-light rounded-lg px-4 py-3">
         <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse-dot" />
         <span className="text-primary font-semibold text-sm">正在录制</span>
+        {asrMsg && (
+          <span className="text-xs text-text-muted ml-1">{asrMsg}</span>
+        )}
         <div className="text-xs text-text-muted ml-2">
           🗣 {speakerCount} 人 · {segmentCount} 段落
         </div>
@@ -135,7 +159,7 @@ export default function RecordPage() {
           return (
             <div key={seg.id} className="animate-fade-in">
               <div className="text-xs font-semibold mb-1" style={{ color }}>
-                {seg.speakerName} · {seg.timestampFormatted}
+                {seg.speakerName} · {formatTime(seg.timestamp)}
               </div>
               <div className="bg-white rounded-lg px-4 py-3 text-sm leading-relaxed shadow-sm">
                 {seg.text}
@@ -147,7 +171,7 @@ export default function RecordPage() {
 
       {/* 自动保存提示 */}
       <div className="bg-warning-bg border border-yellow-200 rounded px-3 py-2 text-xs text-yellow-700">
-        💾 每 30 秒自动保存，崩溃可恢复
+        💾 每条自动保存，崩溃可恢复
       </div>
 
       {/* 操作按钮 */}

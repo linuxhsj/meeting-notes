@@ -1,6 +1,6 @@
 /**
- * E2E 测试 — Playwright + Electron 真实集成测试
- * 测试完整 Electron 应用启动、IPC 通信、UI 渲染
+ * E2E 测试 — Playwright + Vite 集成测试
+ * 测试 React UI、MockASR 模拟数据、UI 状态转换
  */
 
 import { chromium } from 'playwright'
@@ -12,9 +12,7 @@ function pass(msg) { console.log(`  ✅ ${msg}`); passed++ }
 function fail(msg) { console.error(`  ❌ ${msg}`); failed++ }
 
 async function run() {
-  // 用 Playwright 启动真实 Electron（带 --no-sandbox 适配 Linux Docker/容器环境）
   const browser = await chromium.launch({
-    executablePath: '/usr/bin/google-chrome',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   })
 
@@ -100,11 +98,17 @@ async function run() {
   // ========== 场景 5：历史页 ==========
   console.log('\n📍 场景 5：历史记录页')
   await page.locator('text=历史记录').first().click()
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1000) // 等待路由切换和页面加载
 
+  // 先检查页面是否切换
   const histTitle = await page.locator('text=历史会议').count()
   if (histTitle > 0) pass('历史记录页标题正确')
-  else fail('历史记录页标题丢失')
+  else {
+    // 调试：检查当前 URL 和页面内容
+    const url = page.url()
+    const bodyText = await page.textContent('body')
+    fail(`历史记录页标题丢失 (URL: ${url}, 包含: ${bodyText?.slice(0, 100)}...)`)
+  }
 
   const emptyHint = await page.locator('text=暂无会议记录').count()
   if (emptyHint > 0) pass('空状态提示"暂无会议记录"正确显示')

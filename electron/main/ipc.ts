@@ -90,6 +90,16 @@ export function registerAllIPC(mainWindow: BrowserWindow) {
     saveApiKey(data.key, data.provider)
   })
 
+  // === ASR API Key ===
+  ipcMain.handle('get-asr-api-key', () => {
+    const asrKey = store.get('asrApiKey') as string | undefined
+    return asrKey
+  })
+
+  ipcMain.on('set-asr-api-key', (_, key: string) => {
+    store.set('asrApiKey', key)
+  })
+
   // === 崩溃恢复 ===
   ipcMain.handle('get-in-progress', () => {
     return getInProgressMeeting()

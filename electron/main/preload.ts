@@ -42,9 +42,12 @@ export interface ElectronAPI {
   getInProgress: () => Promise<MeetingData | null>
   // AI 摘要
   summarizeMeeting: (id: string) => Promise<string>
-  // API Key
+  // API Key（AI 摘要用）
   getApiKey: () => Promise<{ key?: string; provider: string }>
   setApiKey: (key: string, provider: string) => void
+  // ASR API Key（独立配置）
+  getAsrApiKey: () => Promise<string | undefined>
+  setAsrApiKey: (key: string) => void
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -70,4 +73,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // API Key
   getApiKey: () => ipcRenderer.invoke('get-api-key'),
   setApiKey: (key: string, provider: string) => ipcRenderer.send('set-api-key', { key, provider }),
+  // ASR API Key
+  getAsrApiKey: () => ipcRenderer.invoke('get-asr-api-key'),
+  setAsrApiKey: (key: string) => ipcRenderer.send('set-asr-api-key', key),
 } as ElectronAPI)

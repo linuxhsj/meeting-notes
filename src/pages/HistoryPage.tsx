@@ -31,10 +31,17 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    window.electronAPI?.getMeetings().then((data) => {
-      setMeetings(data || [])
+    // Vite 开发模式：electronAPI 可能不存在（无 Electron 主进程）
+    if (window.electronAPI?.getMeetings) {
+      window.electronAPI.getMeetings().then((data) => {
+        setMeetings(data || [])
+        setLoading(false)
+      })
+    } else {
+      // Mock 数据用于 Vite 开发
+      setMeetings([])
       setLoading(false)
-    })
+    }
   }, [])
 
   if (loading) {
