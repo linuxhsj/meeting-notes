@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { registerAllIPC } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -9,13 +10,15 @@ const createWindow = () => {
     height: 700,
     minWidth: 800,
     minHeight: 600,
-    title: 'AI 会议纪要',
+    title: 'AI Meeting Notes',
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
     },
   })
+
+  registerAllIPC(mainWindow)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -28,17 +31,6 @@ const createWindow = () => {
     mainWindow = null
   })
 }
-
-// IPC: 接收开始/停止录制命令（真实 ASR 在 Task 3 接入）
-ipcMain.on('start-recording', (event) => {
-  // TODO: 接入 ffmpeg + 说话人分离
-  console.log('[Main] start-recording')
-})
-
-ipcMain.on('stop-recording', () => {
-  // TODO: 停止音频捕获
-  console.log('[Main] stop-recording')
-})
 
 app.whenReady().then(createWindow)
 
