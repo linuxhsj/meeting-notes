@@ -1,0 +1,33 @@
+{
+  "appId": "com.linuxhsj.meeting-notes",
+  "productName": "AI Meeting Notes",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "resources/",
+      "to": "resources/",
+      "filter": ["**/*"]
+    }
+  ],
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Utility",
+    "asar": true
+  },
+  "mac": {
+    "target": ["dmg"],
+    "category": "public.app-category-productivity",
+    "asar": true
+  },
+  "win": {
+    "target": ["nsis"],
+    "category": "Utility",
+    "asar": true
+  }
+}
