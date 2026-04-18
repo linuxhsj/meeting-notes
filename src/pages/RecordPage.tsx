@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { RecordingState, TranscriptSegment } from '../shared/types'
+import { useNavigate } from 'react-router-dom'
+import type { TranscriptSegment } from '../shared/types'
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -15,6 +16,7 @@ const SPEAKER_COLORS: Record<string, string> = {
 }
 
 export default function RecordPage() {
+  const navigate = useNavigate()
   const [recState, setRecState] = useState<'idle' | 'recording' | 'error'>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [speakerCount, setSpeakerCount] = useState(0)
@@ -157,10 +159,10 @@ export default function RecordPage() {
           ⏹ 停止录制
         </button>
         <button
-          onClick={() => window.location.hash = '#notes'}
+          onClick={() => navigate('/history')}
           className="flex-1 bg-white text-primary border border-primary rounded-lg py-3 text-sm hover:bg-primary-light transition-colors"
         >
-          📋 全屏纪要
+          📋 查看历史
         </button>
       </div>
     </div>

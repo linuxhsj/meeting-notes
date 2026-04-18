@@ -12,7 +12,6 @@ type SegmentCallback = (seg: unknown) => void
 
 let timer: ReturnType<typeof setInterval> | null = null
 let mockTimer: ReturnType<typeof setTimeout> | null = null
-let saveTimer: ReturnType<typeof setInterval> | null = null
 let elapsed = 0
 let segmentCount = 0
 let currentMeetingId = ''
@@ -86,8 +85,8 @@ export function transcribe(
 export function stopTranscribe() {
   if (timer) clearInterval(timer)
   if (mockTimer) clearTimeout(mockTimer)
-  if (saveTimer) clearInterval(saveTimer)
   timer = null
   mockTimer = null
-  saveTimer = null
+  elapsed = 0
+  segmentCount = 0
 }

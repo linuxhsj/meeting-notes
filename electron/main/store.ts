@@ -90,7 +90,6 @@ export function saveSegment(seg: Omit<SegmentData, 'meetingId'>) {
   const store = readStore()
   const meeting = store.meetings.find((m) => m.id === seg.meetingId)
   if (!meeting) return
-  const existing = meeting.id ? store.segments.filter((s) => s.meetingId === seg.meetingId) : []
   const idx = store.segments.findIndex((s) => s.id === seg.id && s.meetingId === seg.meetingId)
   if (idx >= 0) {
     store.segments[idx] = seg as SegmentData
