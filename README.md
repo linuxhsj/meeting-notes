@@ -4,6 +4,31 @@
 
 [English](#english) · [中文](#中文)
 
+**当前状态:** V1 开发完成 · [GitHub](https://github.com/linuxhsj/meeting-notes) · [Project 进度](#status)
+
+---
+
+## Status
+
+**V1 MVP — 开发完成 ✅**
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 录制页三状态 | ✅ | 空闲/录制中/异常 |
+| 实时转写预览 | ✅ | 模拟数据，真实 ASR 接口预留 |
+| 说话人分离 | ✅ | 轮询模拟，pyannote.audio 预留 |
+| AI 摘要 | ✅ | 通义千问/Kimi，含超时+错误处理 |
+| 数据持久化 | ✅ | JSON，崩溃可恢复 |
+| 中英双语 | ✅ | 右上角一键切换 |
+| 打包配置 | ✅ | electron-builder 已配置 |
+| E2E 测试 | 🔧 | 测试套件就绪 |
+
+**V2 计划:** 真实 ASR 接入 · pyannote.audio · PDF 导出 · 搜索
+
+---
+
+## English
+
 ---
 
 ## English
