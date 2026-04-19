@@ -6,48 +6,41 @@
  * API 文档：https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service
  */
 
+import type { ASRProvider, ASRSegment, ASRState } from './types'
+
 const ASR_WS_URL = 'wss://dashscope.aliyuncs.com/api-ws/v1/inference'
 const MODEL = 'paraformer-realtime-8k-v2'
 
-export interface ASRSegment {
-  id: string
-  text: string
-  timestamp: number
-  isFinal: boolean
-  speakerId: string
-  speakerName: string
-}
+export class QwenASR implements ASRProvider {
+  name = '阿里云 QwenASR'
+  hasSpeakerDiarization = true
 
-type SegmentCallback = (seg: ASRSegment) => void
-type StateCallback = (state: 'connecting' | 'listening' | 'not-available' | 'error', msg?: string) => void
-
-export class QwenASR {
   private ws: WebSocket | null = null
   private mediaRecorder: MediaRecorder | null = null
   private apiKey = ''
-  private onSegment: SegmentCallback | null = null
-  private onState: StateCallback | null = null
+  private onSegmentCallback: ((seg: ASRSegment) => void) | null = null
+  private onStateCallback: ((state: ASRState, msg?: string) => void) | null = null
   private startTime = 0
   private speakerIdx = 0
   private running = false
 
-  private readonly SPEAKERS = [
-    { id: 'sp-1', name: '说话人 1' },
-    { id: 'sp-2', name: '说话人 2' },
-    { id: 'sp-3', name: '说话人 3' },
-  ]
+  // 重连机制
+  private reconnectAttempts = 0
+  private maxReconnectAttempts = 3
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   async start(
     apiKey: string,
-    onSegment: SegmentCallback,
-    onState: StateCallback
+    onSegment: (seg: ASRSegment) => void,
+    onState: (state: ASRState, msg?: string) => void
   ): Promise<boolean> {
     this.apiKey = apiKey
-    this.onSegment = onSegment
-    this.onState = onState
+    this.onSegmentCallback = onSegment
+    this.onStateCallback = onState
     this.startTime = Date.now()
     this.speakerIdx = 0
     this.running = true
+    this.reconnectAttempts = 0
 
     // 先检查麦克风权限
     try {
@@ -66,13 +59,16 @@ export class QwenASR {
         this.ws = new WebSocket(ASR_WS_URL)
 
         this.ws.onopen = () => {
-          // 发送初始化请求
+          // 发送初始化请求（带说话人分离参数）
           this.ws!.send(JSON.stringify({
             header: {
               appkey: 'audio-asr',
               algorithm: 'paraformer',
               version: '0.1.0',
               model: MODEL,
+              // 说话人分离参数（行业默认值）
+              enable_diarization: true,
+              max_speaker_num: 8,
             }
           }))
           resolve(true)
@@ -88,7 +84,9 @@ export class QwenASR {
         }
 
         this.ws.onclose = () => {
-          if (this.running) onState('error', 'ASR 连接已断开')
+          if (this.running) {
+            this.handleDisconnect()
+          }
         }
 
         setTimeout(() => {
@@ -105,6 +103,26 @@ export class QwenASR {
     })
   }
 
+  private handleDisconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      const delay = 1000 * Math.pow(2, this.reconnectAttempts) // 指数退避: 1s, 2s, 4s
+      this.reconnectAttempts++
+      this.onStateCallback?.('connecting', `连接断开，正在重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
+      this.reconnectTimer = setTimeout(() => this.reconnect(), delay)
+    } else {
+      this.onStateCallback?.('error', '连接断开，请检查网络')
+    }
+  }
+
+  private async reconnect() {
+    if (!this.running) return
+    try {
+      await this.start(this.apiKey, this.onSegmentCallback!, this.onStateCallback!)
+    } catch {
+      this.onStateCallback?.('error', '重连失败')
+    }
+  }
+
   private handleMessage(data: string | Blob) {
     if (typeof data !== 'string') return
 
@@ -113,21 +131,27 @@ export class QwenASR {
       const event = msg?.header?.event as string
 
       if (event === 'ready') {
-        this.onState?.('listening')
+        this.onStateCallback?.('listening')
         this.startMicCapture()
       } else if (event === 'result-generated') {
         const sentence = msg?.payload?.output?.sentence
         if (sentence?.text) {
           const elapsed = Math.floor((Date.now() - this.startTime) / 1000)
-          const speaker = this.SPEAKERS[this.speakerIdx % this.SPEAKERS.length]
+
+          // 解析说话人信息（阿里云说话人分离输出格式）
+          const speakerData = msg?.payload?.output?.sentence
+          const speakerId = speakerData?.channel_id ?? speakerData?.spk_id ?? this.speakerIdx % 3
+          const speakerNum = parseInt(String(speakerId)) || 0
+          const speakerName = `说话人 ${speakerNum + 1}`
+
           this.speakerIdx++
-          this.onSegment?.({
-            id: `seg-${Date.now()}`,
+          this.onSegmentCallback?.({
+            id: `qwen-${Date.now()}`,
             text: sentence.text,
             timestamp: elapsed,
             isFinal: true,
-            speakerId: speaker.id,
-            speakerName: speaker.name,
+            speakerId: `sp-${speakerId}`,
+            speakerName,
           })
         }
       }
@@ -159,12 +183,16 @@ export class QwenASR {
         stream.getTracks().forEach(t => t.stop())
       })
       .catch((err: Error) => {
-        this.onState?.('error', `麦克风启动失败: ${err.message}`)
+        this.onStateCallback?.('error', `麦克风启动失败: ${err.message}`)
       })
   }
 
   stop() {
     this.running = false
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
     if (this.mediaRecorder?.state !== 'inactive') {
       this.mediaRecorder?.stop()
     }
