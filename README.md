@@ -58,28 +58,18 @@
 
 ### Screenshots
 
-#### Recording Page
-```
-┌─────────────────────────────────────────────┐
-│  🎙  AI Meeting Notes                       │
-│──────┬──────────────────────────────────────│
-│ 🎤   │                                      │
-│ Rec  │        ┌──────────────┐               │
-│──────│        │   🔴 00:08   │  ← live timer │
-│ 📂   │        │  recording  │               │
-│ Hist │  ┌─────────────────────────────┐      │
-│      │  │ 📡 Live Transcript         │      │
-│      │  │ 🟦 Speaker 1 · 00:03       │      │
-│      │  │ "好的，今天我们来同步..."  │      │
-│      │  │ 🟩 Speaker 2 · 00:04       │      │
-│      │  │ "我这边后端 API 已..."     │      │
-│      │  └─────────────────────────────┘      │
-│      │  💾 Auto-save every 30s              │
-│      │  ┌─────────┐  ┌─────────┐           │
-│      │  │ ⏹ Stop │  │ 📋 Notes│           │
-│      │  └─────────┘  └─────────┘           │
-└─────────────────────────────────────────────┘
-```
+#### Recording Page (Idle)
+![Recording Page](images/record-page-idle.png)
+
+#### Recording Page (Active)
+![Recording Active](images/record-page-recording.png)
+
+#### Meeting Notes
+![Meeting Notes](images/meeting-notes.png)
+
+---
+
+*If screenshots are missing, run the app with `npm run dev` and take screenshots manually, then save them to the `images/` folder.*
 
 #### Notes Page
 ```
