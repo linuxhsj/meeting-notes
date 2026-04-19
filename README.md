@@ -4,28 +4,6 @@
 
 [English](#english) · [中文](#中文)
 
-**当前状态:** V1 开发完成 · [GitHub](https://github.com/linuxhsj/meeting-notes) · [Project 进度](#status)
-
----
-
-## Status
-
-**V1 MVP — 开发完成 ✅**
-
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| 录制页三状态 | ✅ | 空闲/录制中/异常 |
-| 实时转写 | ✅ | 阿里云 QwenASR |
-| 说话人分离 | ✅ | 阿里云内置，支持 8 人 |
-| AI 摘要 | ✅ | 通义千问/Kimi，含超时+错误处理 |
-| 数据持久化 | ✅ | JSON，崩溃可恢复 |
-| 配置加密 | ✅ | electron-store 加密存储 |
-| 中英双语 | ✅ | 默认英语，点击切换中文 |
-| 打包配置 | ✅ | electron-builder 已配置 |
-| E2E 测试 | ✅ | 10/10 测试通过 |
-
-**V2 计划:** PDF 导出 · Azure 说话人分离 · 多语言支持
-
 ---
 
 ## English
