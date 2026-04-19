@@ -58,11 +58,7 @@
 
 ### Screenshots
 
-#### Recording Page
 ![Recording Page](images/record-page-idle.png)
-
-#### History Page
-![History Page](images/history-page.png)
 
 ---
 
