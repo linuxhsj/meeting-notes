@@ -19,25 +19,31 @@
 | 国际化 | 自定义 i18n Context | 中英双语 |
 | 数据持久化 | JSON 文件（electron-store） | 崩溃恢复 |
 | AI 摘要 | 通义千问 / Kimi API | 用户自填 Key |
-| ASR（V1） | 模拟流式数据 | 接口预留给真实 ASR |
+| ASR | 阿里云 QwenASR | 支持说话人分离，用户自填 Key |
 
 ## 架构
 
 ```
 Electron 主进程
-├── audio.ts        — ffmpeg 音频捕获（V1 mock）
-├── transcriber.ts  — 转写器（V1 模拟 → 真实 ASR 预留接口）
-├── speaker.ts      — 说话人分离（轮询 → pyannote.audio 预留）
+├── preload.ts      — 安全 IPC Bridge
+├── ipc.ts         — IPC 通道注册
+├── config.ts      — 加密配置存储（API Key）
 ├── summarizer.ts   — AI 摘要（通义千问/Kimi，含超时+错误处理）
-├── store.ts        — JSON 持久化（崩溃恢复）
-└── preload.ts      — 安全 IPC Bridge
+└── store.ts        — JSON 持久化（会议数据崩溃恢复）
 
 React 渲染进程
-├── RecordPage.tsx  — 录制页（三状态：空闲/录制中/异常）
-├── NotesPage.tsx   — 纪要页（摘要+说话人+转写+操作）
-├── HistoryPage.tsx  — 历史页（会议列表）
-├── App.tsx         — 布局+导航+i18n 切换
-└── i18n.tsx        — 中英翻译 Context
+├── src/asr/        — ASR 模块
+│   ├── types.ts    — 类型定义
+│   ├── index.ts    — 统一导出
+│   ├── mock-asr.ts — MockASR（开发测试）
+│   └── qwen-websocket.ts — QwenASR（阿里云）
+
+React 渲染进程
+├── src/pages/RecordPage.tsx  — 录制页（三状态：空闲/录制中/异常）
+├── src/pages/NotesPage.tsx   — 纪要页（摘要+说话人+转写+操作）
+├── src/pages/HistoryPage.tsx  — 历史页（会议列表）
+├── src/App.tsx         — 布局+导航+i18n 切换
+└── src/i18n.tsx        — 中英翻译 Context
 ```
 
 ## 竞品学习
@@ -68,14 +74,14 @@ React 渲染进程
 ## MVP 聚焦
 
 - ✅ 音频：自动检测默认设备，一键切换
-- ✅ 说话人：V1 轮询分离（说话人 1/2/3），会后可编辑姓名
-- ✅ 导出：V1 一键复制全文（Markdown 格式）
+- ✅ ASR：阿里云 QwenASR 实时转写，支持说话人分离
+- ✅ 说话人：自动分离，会后可编辑姓名
+- ✅ 导出：一键复制全文（Markdown 格式）
 - ✅ 断线：每条转写后自动保存，崩溃可恢复
 - ✅ 实时：流式转写文字，计时器实时显示
 - ✅ AI 摘要：录制完成后生成，含超时和错误处理
+- ✅ 配置：加密存储 API Key（electron-store）
 - ❌ 导出 PDF / Word（V2）
-- ❌ 真实 ASR 接入（V2）
-- ❌ pyannote.audio 说话人分离（V2）
 
 ## 项目结构
 
@@ -84,26 +90,25 @@ meeting-notes/
 ├── electron/main/          # Electron 主进程
 │   ├── index.ts            # 窗口管理
 │   ├── preload.ts          # IPC 安全 Bridge
-│   ├── ipc.ts              # IPC 通道注册
-│   ├── audio.ts            # 音频捕获（预留）
-│   ├── transcriber.ts       # 转写器（V1 mock）
-│   ├── speaker.ts           # 说话人分离（V1 mock）
-│   ├── summarizer.ts        # AI 摘要（通义千问/Kimi）
+│   ├── ipc.ts             # IPC 通道注册
+│   ├── config.ts           # 加密配置存储（API Key）
+│   ├── summarizer.ts       # AI 摘要（通义千问/Kimi）
 │   └── store.ts            # JSON 持久化
 ├── src/
+│   ├── asr/               # ASR 模块
+│   │   ├── types.ts       # 类型定义
+│   │   ├── index.ts       # 统一导出
+│   │   ├── mock-asr.ts   # MockASR（开发测试）
+│   │   └── qwen-websocket.ts # QwenASR（阿里云）
 │   ├── pages/
-│   │   ├── RecordPage.tsx  # 录制页
-│   │   ├── NotesPage.tsx    # 纪要页
-│   │   └── HistoryPage.tsx  # 历史页
-│   ├── App.tsx             # 布局+导航+i18n
-│   ├── i18n.tsx           # 中英翻译
-│   └── shared/types.ts     # 共享类型
-├── docs/superpowers/
-│   ├── specs/2026-04-18-meeting-notes-design.md
-│   └── plans/2026-04-18-meeting-notes-plan.md
-├── test-e2e.mjs            # E2E 测试
-├── electron-builder.json   # 打包配置
-└── README.md               # 中英双语说明
+│   │   ├── RecordPage.tsx # 录制页
+│   │   ├── NotesPage.tsx   # 纪要页
+│   │   └── HistoryPage.tsx # 历史页
+│   ├── App.tsx            # 布局+导航+i18n
+│   └── i18n.tsx          # 中英翻译
+├── docs/superpowers/       # 设计文档
+├── test-e2e.mjs           # E2E 测试
+└── README.md              # 中英双语说明
 ```
 
 ## 运行命令
@@ -124,7 +129,13 @@ https://github.com/linuxhsj/meeting-notes
 - [x] Step 1: 现有工具检查完毕
 - [x] Step 2: 需求确认
 - [x] Step 3: 竞品调研
-- [x] Step 4: UI 设计（Visual Companion + 用户审核通过）
-- [x] Step 5: 任务拆解（8 个任务）
-- [x] Step 6: 执行（8 个任务全部完成，代码已审核并修复 7 处问题）
-- [ ] Step 7: 测试（E2E 测试套件已就绪，待完善）
+- [x] Step 4: UI 设计
+- [x] Step 5: 任务拆解
+- [x] Step 6: 执行
+  - ✅ Electron + React 三页面
+  - ✅ 阿里云 QwenASR 实时转写
+  - ✅ 说话人分离支持
+  - ✅ AI 摘要（通义千问/Kimi）
+  - ✅ 加密配置存储
+  - ✅ E2E 测试 (10/10 通过)
+- [ ] Step 7: 真实 ASR 测试（需要阿里云 API Key）

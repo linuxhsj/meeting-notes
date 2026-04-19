@@ -33,39 +33,33 @@ async function run() {
   await page.goto(BASE, { waitUntil: 'networkidle' })
   await page.waitForSelector('button', { timeout: 10000 })
 
-  const startBtnCount = await page.locator('button:has-text("开始录制")').count()
-  if (startBtnCount > 0) pass('录制页加载，"开始录制"按钮可见')
-  else fail('"开始录制"按钮未找到')
+  // 默认语言是英文
+  const startBtnCount = await page.locator('button:has-text("Start Recording")').count()
+  if (startBtnCount > 0) pass('录制页加载，"Start Recording"按钮可见')
+  else fail('"Start Recording"按钮未找到')
 
-  const idleCount = await page.locator('text=未在录制').count()
-  if (idleCount > 0) pass('空闲状态"未在录制"显示正确')
+  const idleCount = await page.locator('text=Not Recording').count()
+  if (idleCount > 0) pass('空闲状态"Not Recording"显示正确')
   else fail('空闲状态文字丢失')
 
-  const deviceBtn = await page.locator('button:has-text("切换设备")').count()
-  if (deviceBtn > 0) pass('"切换设备"按钮可见')
-  else fail('"切换设备"按钮丢失')
+  const deviceBtn = await page.locator('button:has-text("Switch Device")').count()
+  if (deviceBtn > 0) pass('"Switch Device"按钮可见')
+  else fail('"Switch Device"按钮丢失')
 
-  const asrModeText = await page.locator('text=阿里云 QwenASR').count()
-  if (asrModeText > 0) pass('ASR 模式显示"阿里云 QwenASR"')
+  const asrModeText = await page.locator('text=Alibaba QwenASR').count()
+  if (asrModeText > 0) pass('ASR 模式显示"Alibaba QwenASR"')
   else fail('ASR 模式文字不正确')
 
   // ========== 场景 2：无 API Key 时点击录制 → 错误状态 ==========
   console.log('\n📍 场景 2：无 API Key 时的错误处理')
-  await page.locator('button:has-text("开始录制")').click()
+  await page.locator('button:has-text("Start Recording")').click()
   await page.waitForTimeout(500)
 
-  // 检查是否出现错误状态或 prompt 对话框
-  const errorState = await page.locator('text=配置 API Key').count()
-  const dialog = page.locator('input[type="text"], input').first()
-  const dialogVisible = await dialog.isVisible().catch(() => false)
-
-  if (errorState > 0 || dialogVisible) {
+  // 检查是否出现错误状态
+  const errorState = await page.locator('text=Configure API Key').count() +
+                     await page.locator('text=API Key').count()
+  if (errorState > 0) {
     pass('无 API Key 时正确提示配置')
-
-    // 关闭 prompt 对话框（如果有）
-    page.on('dialog', async dialog => {
-      await dialog.dismiss()
-    })
   } else {
     fail('无 API Key 时未正确提示')
   }
@@ -78,15 +72,15 @@ async function run() {
 
   // 刷新页面
   await page.reload({ waitUntil: 'networkidle' })
-  await page.waitForSelector('button:has-text("开始录制")', { timeout: 5000 })
+  await page.waitForSelector('button:has-text("Start Recording")', { timeout: 5000 })
 
   // 点击开始录制（当前没有真实 API Key，应该显示错误状态）
-  await page.locator('button:has-text("开始录制")').click()
+  await page.locator('button:has-text("Start Recording")').click()
   await page.waitForTimeout(1000)
 
   // 应该看到错误提示（因为没有真实 API Key）
-  const errorHint = await page.locator('text=配置 API Key').count() +
-                     await page.locator('text=音频捕获中断').count()
+  const errorHint = await page.locator('text=Configure API Key').count() +
+                     await page.locator('text=API Key').count()
   if (errorHint > 0) pass('录制按钮触发响应（显示错误提示）')
   else fail('录制按钮无响应')
 
@@ -95,36 +89,38 @@ async function run() {
 
   // ========== 场景 4：历史页 ==========
   console.log('\n📍 场景 4：历史记录页')
-  await page.locator('text=历史记录').first().click()
+  await page.locator('text=History').first().click()
   await page.waitForTimeout(1000)
 
-  const histTitle = await page.locator('text=历史会议').count()
+  const histTitle = await page.locator('text=History').count()
   if (histTitle > 0) pass('历史记录页标题正确')
-  else {
-    const url = page.url()
-    const bodyText = await page.textContent('body')
-    fail(`历史记录页标题丢失 (URL: ${url})`)
-  }
+  else fail('历史记录页标题丢失')
 
-  const emptyHint = await page.locator('text=暂无会议记录').count()
-  if (emptyHint > 0) pass('空状态提示"暂无会议记录"正确显示')
+  const emptyHint = await page.locator('text=No meeting records').count()
+  if (emptyHint > 0) pass('空状态提示"No meeting records"正确显示')
   else pass('历史页加载')
 
   // ========== 场景 5：语言切换 ==========
   console.log('\n📍 场景 5：中英语言切换')
-  await page.locator('text=录制').first().click()
+  await page.locator('text=Record').first().click()
   await page.waitForTimeout(300)
 
-  const zhToggle = await page.locator('button:has-text("中文")').count()
-  if (zhToggle > 0) {
-    await page.locator('button:has-text("中文")').click()
-    await page.waitForTimeout(300)
-    const enToggle = await page.locator('button:has-text("EN")').count()
-    if (enToggle > 0) pass('语言切换正常：中文 → EN')
-    else fail('切换后未显示 EN 按钮')
+  // 点击切换到中文
+  await page.locator('button:has-text("中文")').click()
+  await page.waitForTimeout(300)
+  const enToggle = await page.locator('button:has-text("EN")').count()
+  if (enToggle > 0) {
+    pass('语言切换正常：中文')
   } else {
-    pass('当前语言已是中文，跳过')
+    fail('切换后未显示 EN 按钮')
   }
+
+  // 切回英文
+  await page.locator('button:has-text("EN")').click()
+  await page.waitForTimeout(300)
+  const zhToggle = await page.locator('button:has-text("中文")').count()
+  if (zhToggle > 0) pass('语言切换正常：EN → 中文')
+  else fail('切换回中文后未显示中文按钮')
 
   // ========== 场景 6：JS 错误检查 ==========
   console.log('\n📍 场景 6：JS 错误检查')

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { LangProvider, LangContext } from './i18n'
+import { LangProvider, LangContext, t } from './i18n'
 import RecordPage from './pages/RecordPage'
 import NotesPage from './pages/NotesPage'
 import HistoryPage from './pages/HistoryPage'
@@ -18,6 +18,7 @@ function LangToggle() {
 }
 
 function AppInner() {
+  const { lang } = useContext(LangContext)
   return (
     <div className="flex h-screen bg-white">
       {/* 左侧导航 */}
@@ -25,7 +26,7 @@ function AppInner() {
         {/* Logo */}
         <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2">
           <span className="text-xl">🎙</span>
-          <span className="font-semibold text-sm text-text-primary">AI 会议纪要</span>
+          <span className="font-semibold text-sm text-text-primary">{t(lang, 'app.title')}</span>
           <LangToggle />
         </div>
         {/* Nav Items */}
@@ -40,7 +41,7 @@ function AppInner() {
               }`
             }
           >
-            <span>🎤</span> 录制
+            <span>🎤</span> {t(lang, 'nav.record')}
           </NavLink>
           <NavLink
             to="/history"
@@ -52,7 +53,7 @@ function AppInner() {
               }`
             }
           >
-            <span>📂</span> 历史记录
+            <span>📂</span> {t(lang, 'nav.history')}
           </NavLink>
         </div>
         {/* 底部版本 */}

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QwenASR, type ASRSegment } from '../asr'
+import { LangContext, t } from '../i18n'
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -13,10 +14,14 @@ const SPEAKER_COLORS: Record<string, string> = {
   '说话人 1': '#1d4ed8',
   '说话人 2': '#166534',
   '说话人 3': '#854d0e',
+  'Speaker 1': '#1d4ed8',
+  'Speaker 2': '#166534',
+  'Speaker 3': '#854d0e',
 }
 
 export default function RecordPage() {
   const navigate = useNavigate()
+  const { lang } = useContext(LangContext)
   const [recState, setRecState] = useState<'idle' | 'recording' | 'error'>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [speakerCount, setSpeakerCount] = useState(0)
@@ -50,12 +55,11 @@ export default function RecordPage() {
       apiKey = (await window.electronAPI.getAsrApiKey()) || ''
     }
     if (!apiKey) {
-      // 尝试从 localStorage 读取（开发模式）
       apiKey = localStorage.getItem('asrApiKey') || ''
     }
     if (!apiKey) {
       setRecState('error')
-      setAsrMsg('⚠ 请先配置阿里云 API Key')
+      setAsrMsg('⚠ ' + t(lang, 'err.apiKeyMissing'))
       return
     }
 
@@ -68,7 +72,6 @@ export default function RecordPage() {
       (seg) => {
         setSegments((prev) => [...prev, seg])
         setSegmentCount((n) => n + 1)
-        // 更新说话人数量（去重）
         setSpeakerIds((prev) => {
           const newSet = new Set(prev)
           newSet.add(seg.speakerId)
@@ -77,11 +80,11 @@ export default function RecordPage() {
         })
       },
       (state, msg) => {
-        if (state === 'connecting') setAsrMsg('● ' + (msg || '正在连接...'))
-        else if (state === 'listening') setAsrMsg('● 实时识别中')
-        else if (state === 'not-available') setAsrMsg('⚠ ' + (msg || 'ASR 不可用'))
+        if (state === 'connecting') setAsrMsg('● ' + (msg || t(lang, 'rec.connecting')))
+        else if (state === 'listening') setAsrMsg(t(lang, 'rec.listening'))
+        else if (state === 'not-available') setAsrMsg('⚠ ' + (msg || 'ASR unavailable'))
         else if (state === 'error') {
-          setAsrMsg('⚠ ' + (msg || 'ASR 错误'))
+          setAsrMsg('⚠ ' + (msg || 'ASR error'))
           setRecState('error')
         }
       }
@@ -91,7 +94,7 @@ export default function RecordPage() {
     timerRef.current = setInterval(() => {
       setElapsed((e) => e + 1)
     }, 1000)
-  }, [])
+  }, [lang])
 
   const stopRecording = useCallback(() => {
     asrRef.current?.stop()
@@ -117,16 +120,16 @@ export default function RecordPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
         <div className="text-6xl opacity-40">🎤</div>
-        <div className="text-text-secondary text-sm">未在录制</div>
-        <div className="text-xs text-text-muted mb-2">ASR 模式：阿里云 QwenASR（实时转写 + 说话人分离）</div>
+        <div className="text-text-secondary text-sm">{t(lang, 'rec.idle.title')}</div>
+        <div className="text-xs text-text-muted mb-2">{t(lang, 'rec.idle.mode')}</div>
         <button
           onClick={startRecording}
           className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
         >
-          ▶ 开始录制
+          {t(lang, 'rec.start')}
         </button>
         <button className="w-full max-w-xs bg-white text-text-secondary border border-gray-200 rounded py-2.5 text-sm hover:bg-gray-50 transition-colors">
-          🎵 切换设备
+          {t(lang, 'rec.device')}
         </button>
       </div>
     )
@@ -134,24 +137,24 @@ export default function RecordPage() {
 
   // --- 异常状态 ---
   if (recState === 'error') {
-    const isApiKeyMissing = asrMsg.includes('API Key')
+    const isApiKeyMissing = asrMsg.includes('API Key') || asrMsg.includes('API Key')
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
         <div className="text-5xl">⚠️</div>
         <div className="text-center">
           <div className="font-semibold text-error text-sm mb-1">
-            {isApiKeyMissing ? '请配置 API Key' : '音频捕获中断'}
+            {isApiKeyMissing ? t(lang, 'err.apiKeyMissing') : t(lang, 'err.audioInterrupt')}
           </div>
           <div className="text-xs text-text-muted">
             {isApiKeyMissing
-              ? '需要阿里云 DashScope API Key 才能使用真实 ASR'
-              : `上次正常：${formatTime(elapsed)} · 已自动保存`}
+              ? t(lang, 'err.apiKeyHint')
+              : `${t(lang, 'err.lastNormal')}: ${formatTime(elapsed)}`}
           </div>
         </div>
         {isApiKeyMissing ? (
           <button
             onClick={() => {
-              const key = prompt('请输入阿里云 DashScope API Key:')
+              const key = prompt(t(lang, 'err.prompt'))
               if (key) {
                 localStorage.setItem('asrApiKey', key)
                 setAsrMsg('')
@@ -160,18 +163,18 @@ export default function RecordPage() {
             }}
             className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
           >
-            🔑 配置 API Key
+            {t(lang, 'err.configKey')}
           </button>
         ) : (
           <button
             onClick={startRecording}
             className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
           >
-            🔄 重新检测设备
+            {t(lang, 'err.retry')}
           </button>
         )}
         <button className="w-full max-w-xs bg-white text-text-secondary border border-gray-200 rounded py-2.5 text-sm hover:bg-gray-50 transition-colors">
-          🎵 切换设备
+          {t(lang, 'rec.device')}
         </button>
       </div>
     )
@@ -183,12 +186,12 @@ export default function RecordPage() {
       {/* 顶部状态栏 */}
       <div className="flex items-center gap-3 bg-primary-light rounded-lg px-4 py-3">
         <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse-dot" />
-        <span className="text-primary font-semibold text-sm">正在录制</span>
+        <span className="text-primary font-semibold text-sm">{t(lang, 'rec.recording')}</span>
         {asrMsg && (
           <span className="text-xs text-text-muted ml-1">{asrMsg}</span>
         )}
         <div className="text-xs text-text-muted ml-2">
-          🗣 {speakerCount} 人 · {segmentCount} 段落
+          🗣 {speakerCount} {t(lang, 'rec.speakers')} · {segmentCount} {t(lang, 'rec.segments')}
         </div>
         <div className="text-xl font-bold text-text-primary tabular-nums ml-auto">
           {formatTime(elapsed)}
@@ -200,9 +203,9 @@ export default function RecordPage() {
         ref={transcriptRef}
         className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 space-y-3"
       >
-        <div className="text-xs text-text-muted mb-3">📡 实时转写</div>
+        <div className="text-xs text-text-muted mb-3">{t(lang, 'rec.live')}</div>
         {segments.length === 0 && (
-          <div className="text-sm text-text-muted italic">等待发言…</div>
+          <div className="text-sm text-text-muted italic">{t(lang, 'rec.waiting')}</div>
         )}
         {segments.map((seg) => {
           const color = SPEAKER_COLORS[seg.speakerName] || '#666'
@@ -221,7 +224,7 @@ export default function RecordPage() {
 
       {/* 自动保存提示 */}
       <div className="bg-warning-bg border border-yellow-200 rounded px-3 py-2 text-xs text-yellow-700">
-        💾 每条自动保存，崩溃可恢复
+        {t(lang, 'rec.autoSave')}
       </div>
 
       {/* 操作按钮 */}
@@ -230,13 +233,13 @@ export default function RecordPage() {
           onClick={stopRecording}
           className="flex-1 bg-red-500 text-white rounded-lg py-3 text-sm font-semibold hover:bg-red-600 transition-colors"
         >
-          ⏹ 停止录制
+          {t(lang, 'rec.stop')}
         </button>
         <button
           onClick={() => navigate('/history')}
           className="flex-1 bg-white text-primary border border-primary rounded-lg py-3 text-sm hover:bg-primary-light transition-colors"
         >
-          📋 查看历史
+          {t(lang, 'rec.notes')}
         </button>
       </div>
     </div>

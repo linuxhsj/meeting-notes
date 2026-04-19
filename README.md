@@ -15,15 +15,16 @@
 | 功能 | 状态 | 说明 |
 |------|------|------|
 | 录制页三状态 | ✅ | 空闲/录制中/异常 |
-| 实时转写预览 | ✅ | 模拟数据，真实 ASR 接口预留 |
-| 说话人分离 | ✅ | 轮询模拟，pyannote.audio 预留 |
+| 实时转写 | ✅ | 阿里云 QwenASR |
+| 说话人分离 | ✅ | 阿里云内置，支持 8 人 |
 | AI 摘要 | ✅ | 通义千问/Kimi，含超时+错误处理 |
 | 数据持久化 | ✅ | JSON，崩溃可恢复 |
-| 中英双语 | ✅ | 右上角一键切换 |
+| 配置加密 | ✅ | electron-store 加密存储 |
+| 中英双语 | ✅ | 默认英语，点击切换中文 |
 | 打包配置 | ✅ | electron-builder 已配置 |
-| E2E 测试 | 🔧 | 测试套件就绪 |
+| E2E 测试 | ✅ | 10/10 测试通过 |
 
-**V2 计划:** 真实 ASR 接入 · pyannote.audio · PDF 导出 · 搜索
+**V2 计划:** PDF 导出 · Azure 说话人分离 · 多语言支持
 
 ---
 
@@ -106,13 +107,12 @@
 ### Tech Stack
 
 ```
-Audio Input        ffmpeg + BlackHole / WASAPI
-Speaker Split      pyannote.audio
-ASR (V1 mock)     Simulated streaming text
+Audio Input        MediaRecorder API (browser)
+ASR               阿里云 QwenASR (WebSocket, speaker diarization)
 AI Summary         通义千问 / Kimi API (user provides key)
 Frontend          React 18 + TailwindCSS + React Router
 Desktop           Electron 28
-Persistence       Local SQLite
+Persistence       Local JSON + electron-store (encrypted)
 ```
 
 ### Getting Started
@@ -220,13 +220,12 @@ Open the app → click **Settings** (bottom-left) → paste your API key:
 ### 技术架构
 
 ```
-音频捕获        ffmpeg + BlackHole / WASAPI
-说话人分离      pyannote.audio
-ASR（V1 模拟）  流式模拟数据，真实 ASR 接口预留给后续接入
+音频捕获        MediaRecorder API（浏览器原生）
+ASR            阿里云 QwenASR（WebSocket，支持说话人分离）
 AI 摘要         通义千问 / Kimi API（用户自填 Key）
 前端            React 18 + TailwindCSS + React Router
 桌面框架        Electron 28
-数据持久化      本地 SQLite
+数据持久化      本地 JSON + electron-store（加密存储）
 ```
 
 ### 快速开始

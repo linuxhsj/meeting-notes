@@ -26,17 +26,27 @@ export const t = (lang: Lang, key: string): string => {
     'nav.history': { en: 'History', zh: '历史记录' },
     // Record page
     'rec.idle.title': { en: 'Not Recording', zh: '未在录制' },
-    'rec.idle.hint': { en: 'Click Start to capture system audio', zh: '点击下方按钮开始捕获系统音频' },
+    'rec.idle.mode': { en: 'ASR: Alibaba QwenASR (Real-time + Speaker Diarization)', zh: 'ASR 模式：阿里云 QwenASR（实时转写 + 说话人分离）' },
     'rec.start': { en: '▶ Start Recording', zh: '▶ 开始录制' },
     'rec.device': { en: '🎵 Switch Device', zh: '🎵 切换设备' },
     'rec.recording': { en: 'Recording', zh: '正在录制' },
     'rec.live': { en: '📡 Live Transcript', zh: '📡 实时转写' },
     'rec.waiting': { en: 'Waiting for speech…', zh: '等待发言…' },
-    'rec.autoSave': { en: '💾 Auto-save every 30s', zh: '💾 每 30 秒自动保存' },
+    'rec.autoSave': { en: '💾 Auto-save enabled', zh: '💾 每条自动保存，崩溃可恢复' },
     'rec.stop': { en: '⏹ Stop Recording', zh: '⏹ 停止录制' },
-    'rec.notes': { en: '📋 View Notes', zh: '📋 查看纪要' },
-    'rec.speakers': { en: 'speakers detected', zh: '说话人检测中' },
-    'rec.segments': { en: 'segments recorded', zh: '段落已记录' },
+    'rec.notes': { en: '📋 View Notes', zh: '📋 查看历史' },
+    'rec.connecting': { en: 'Connecting…', zh: '正在连接…' },
+    'rec.listening': { en: '● Real-time识别中', zh: '● 实时识别中' },
+    'rec.speakers': { en: 'speakers', zh: '人' },
+    'rec.segments': { en: 'segments', zh: '段落' },
+    // Error states
+    'err.apiKeyMissing': { en: 'Configure API Key', zh: '请配置 API Key' },
+    'err.apiKeyHint': { en: 'Alibaba DashScope API Key required', zh: '需要阿里云 DashScope API Key 才能使用真实 ASR' },
+    'err.audioInterrupt': { en: 'Audio Interrupted', zh: '音频捕获中断' },
+    'err.lastNormal': { en: 'Last normal', zh: '上次正常' },
+    'err.retry': { en: '🔄 Retry', zh: '🔄 重新检测设备' },
+    'err.configKey': { en: '🔑 Configure API Key', zh: '🔑 配置 API Key' },
+    'err.prompt': { en: 'Enter Alibaba DashScope API Key:', zh: '请输入阿里云 DashScope API Key:' },
     // Notes page
     'notes.title': { en: 'Meeting Notes', zh: '会议纪要' },
     'notes.summary': { en: 'AI Summary', zh: 'AI 摘要' },
@@ -49,6 +59,8 @@ export const t = (lang: Lang, key: string): string => {
     // History page
     'hist.title': { en: 'History', zh: '历史记录' },
     'hist.count': { en: 'records', zh: '条记录' },
+    'hist.empty': { en: 'No meeting records', zh: '暂无会议记录' },
+    'hist.goRecord': { en: 'Go to Record →', zh: '去录制 →' },
   }
   return map[key]?.[lang] ?? key
 }
