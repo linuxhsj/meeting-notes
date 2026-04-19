@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MockASR, type ASRSegment } from '../asr/mock-asr'
+import { QwenASR, type ASRSegment } from '../asr'
 
 function formatTime(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -26,7 +26,7 @@ export default function RecordPage() {
   const [asrMsg, setAsrMsg] = useState('')
   const transcriptRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const asrRef = useRef<MockASR | null>(null)
+  const asrRef = useRef<QwenASR | null>(null)
 
   // 滚动到底部
   useEffect(() => {
@@ -35,26 +35,50 @@ export default function RecordPage() {
     }
   }, [segments])
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     setSegments([])
     setElapsed(0)
     setSpeakerCount(0)
     setSegmentCount(0)
     setErrorMsg('')
+
+    // 获取 API Key
+    let apiKey = ''
+    if (window.electronAPI?.getAsrApiKey) {
+      apiKey = (await window.electronAPI.getAsrApiKey()) || ''
+    }
+    if (!apiKey) {
+      // 尝试从 localStorage 读取（开发模式）
+      apiKey = localStorage.getItem('asrApiKey') || ''
+    }
+    if (!apiKey) {
+      setRecState('error')
+      setAsrMsg('⚠ 请先配置阿里云 API Key')
+      return
+    }
+
     setRecState('recording')
 
-    // 启动 MockASR
-    asrRef.current = new MockASR()
+    // 启动 QwenASR
+    asrRef.current = new QwenASR()
     asrRef.current.start(
-      'mock-key', // 模拟不需要真实 Key
+      apiKey,
       (seg) => {
         setSegments((prev) => [...prev, seg])
         setSegmentCount((n) => n + 1)
+        // 更新说话人数量（去重）
+        setSpeakerCount((prev) => {
+          const speakerIds = new Set([...prev, seg.speakerId])
+          return speakerIds.size
+        })
       },
       (state, msg) => {
         if (state === 'listening') setAsrMsg('● 实时识别中')
         else if (state === 'not-available') setAsrMsg('⚠ ' + (msg || 'ASR 不可用'))
-        else if (state === 'error') setAsrMsg('⚠ ' + (msg || 'ASR 错误'))
+        else if (state === 'error') {
+          setAsrMsg('⚠ ' + (msg || 'ASR 错误'))
+          setRecState('error')
+        }
         else setAsrMsg(msg || '')
       }
     )
@@ -62,7 +86,6 @@ export default function RecordPage() {
     // 计时器
     timerRef.current = setInterval(() => {
       setElapsed((e) => e + 1)
-      setSpeakerCount(3) // 模拟 3 个说话人
     }, 1000)
   }, [])
 
@@ -91,7 +114,7 @@ export default function RecordPage() {
       <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
         <div className="text-6xl opacity-40">🎤</div>
         <div className="text-text-secondary text-sm">未在录制</div>
-        <div className="text-xs text-text-muted mb-2">ASR 模式：模拟数据（真实 ASR V2 接入中）</div>
+        <div className="text-xs text-text-muted mb-2">ASR 模式：阿里云 QwenASR（实时转写 + 说话人分离）</div>
         <button
           onClick={startRecording}
           className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
@@ -107,19 +130,42 @@ export default function RecordPage() {
 
   // --- 异常状态 ---
   if (recState === 'error') {
+    const isApiKeyMissing = asrMsg.includes('API Key')
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-8">
         <div className="text-5xl">⚠️</div>
         <div className="text-center">
-          <div className="font-semibold text-error text-sm mb-1">音频捕获中断</div>
-          <div className="text-xs text-text-muted">上次正常：{formatTime(elapsed)} · 已自动保存</div>
+          <div className="font-semibold text-error text-sm mb-1">
+            {isApiKeyMissing ? '请配置 API Key' : '音频捕获中断'}
+          </div>
+          <div className="text-xs text-text-muted">
+            {isApiKeyMissing
+              ? '需要阿里云 DashScope API Key 才能使用真实 ASR'
+              : `上次正常：${formatTime(elapsed)} · 已自动保存`}
+          </div>
         </div>
-        <button
-          onClick={startRecording}
-          className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
-        >
-          🔄 重新检测设备
-        </button>
+        {isApiKeyMissing ? (
+          <button
+            onClick={() => {
+              const key = prompt('请输入阿里云 DashScope API Key:')
+              if (key) {
+                localStorage.setItem('asrApiKey', key)
+                setAsrMsg('')
+                setRecState('idle')
+              }
+            }}
+            className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
+          >
+            🔑 配置 API Key
+          </button>
+        ) : (
+          <button
+            onClick={startRecording}
+            className="w-full max-w-xs bg-primary text-white rounded py-3 text-sm font-semibold hover:bg-primary-dark transition-colors"
+          >
+            🔄 重新检测设备
+          </button>
+        )}
         <button className="w-full max-w-xs bg-white text-text-secondary border border-gray-200 rounded py-2.5 text-sm hover:bg-gray-50 transition-colors">
           🎵 切换设备
         </button>
