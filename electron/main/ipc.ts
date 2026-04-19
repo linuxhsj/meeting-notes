@@ -10,10 +10,8 @@ import {
   updateMeetingStatus,
   getInProgressMeeting,
 } from './store'
-import Store from 'electron-store'
+import { getAsrApiKey, setAsrApiKey } from './config'
 import { RecordingState } from './preload'
-
-const store = new Store()
 
 let currentWindow: BrowserWindow | null = null
 
@@ -95,12 +93,11 @@ export function registerAllIPC(mainWindow: BrowserWindow) {
 
   // === ASR API Key ===
   ipcMain.handle('get-asr-api-key', () => {
-    const asrKey = store.get('asrApiKey') as string | undefined
-    return asrKey
+    return getAsrApiKey()
   })
 
   ipcMain.on('set-asr-api-key', (_, key: string) => {
-    store.set('asrApiKey', key)
+    setAsrApiKey(key)
   })
 
   // === 崩溃恢复 ===

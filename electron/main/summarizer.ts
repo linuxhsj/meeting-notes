@@ -3,9 +3,7 @@
  * 用户填入 API Key，支持通义千问 / Kimi
  */
 
-import Store from 'electron-store'
-
-export const store = new Store()
+import { getAiApiKey, getAiProvider, setAiApiKey } from './config'
 
 const MOCK_SUMMARY = `本次会议明确了 Q3 目标：
 ① 完成 MVP 核心功能开发
@@ -24,13 +22,13 @@ export interface SummarizeOptions {
 }
 
 export async function summarize({ transcript }: SummarizeOptions): Promise<string> {
-  const apiKey = store.get('aiApiKey') as string | undefined
+  const apiKey = getAiApiKey()
   if (!apiKey) {
     console.log('[Summarizer] No API key configured, using mock summary')
     return `[演示摘要（请在设置中配置 API Key）]\n\n${MOCK_SUMMARY}`
   }
 
-  const provider = store.get('aiProvider') as string || 'qwen'
+  const provider = getAiProvider()
 
   if (provider === 'qwen') {
     return summarizeWithQwen(apiKey, transcript)
@@ -127,14 +125,13 @@ async function summarizeWithKimi(apiKey: string, transcript: string): Promise<st
 }
 
 export function saveApiKey(key: string, provider: string) {
-  store.set('aiApiKey', key)
-  store.set('aiProvider', provider)
+  setAiApiKey(key, provider)
 }
 
 export function getApiKey(): string | undefined {
-  return store.get('aiApiKey') as string | undefined
+  return getAiApiKey()
 }
 
 export function getProvider(): string {
-  return store.get('aiProvider') as string || 'qwen'
+  return getAiProvider()
 }

@@ -28,6 +28,7 @@ export class QwenASR implements ASRProvider {
   private reconnectAttempts = 0
   private maxReconnectAttempts = 3
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private reconnectCancelled = false // 取消令牌，防止竞态条件
 
   async start(
     apiKey: string,
@@ -41,16 +42,7 @@ export class QwenASR implements ASRProvider {
     this.speakerIdx = 0
     this.running = true
     this.reconnectAttempts = 0
-
-    // 先检查麦克风权限
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach(t => t.stop())
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      onState('not-available', `麦克风权限被拒绝: ${msg}`)
-      return false
-    }
+    this.reconnectCancelled = false
 
     onState('connecting', '正在连接 ASR 服务...')
 
@@ -106,6 +98,8 @@ export class QwenASR implements ASRProvider {
   }
 
   private handleDisconnect() {
+    if (this.reconnectCancelled || !this.running) return
+
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       const delay = 1000 * Math.pow(2, this.reconnectAttempts) // 指数退避: 1s, 2s, 4s
       this.reconnectAttempts++
@@ -117,16 +111,21 @@ export class QwenASR implements ASRProvider {
   }
 
   private async reconnect() {
-    if (!this.running) return
+    if (this.reconnectCancelled || !this.running) return
     try {
       await this.start(this.apiKey, this.onSegmentCallback!, this.onStateCallback!)
     } catch {
-      this.onStateCallback?.('error', '重连失败')
+      if (!this.reconnectCancelled) {
+        this.onStateCallback?.('error', '重连失败')
+      }
     }
   }
 
   private handleMessage(data: string | Blob) {
-    if (typeof data !== 'string') return
+    if (typeof data !== 'string') {
+      // 二进制音频数据，静默忽略
+      return
+    }
 
     try {
       const msg = JSON.parse(data)
@@ -191,6 +190,7 @@ export class QwenASR implements ASRProvider {
 
   stop() {
     this.running = false
+    this.reconnectCancelled = true // 取消所有重连
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null

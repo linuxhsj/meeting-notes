@@ -77,13 +77,13 @@ export default function RecordPage() {
         })
       },
       (state, msg) => {
-        if (state === 'listening') setAsrMsg('● 实时识别中')
+        if (state === 'connecting') setAsrMsg('● ' + (msg || '正在连接...'))
+        else if (state === 'listening') setAsrMsg('● 实时识别中')
         else if (state === 'not-available') setAsrMsg('⚠ ' + (msg || 'ASR 不可用'))
         else if (state === 'error') {
           setAsrMsg('⚠ ' + (msg || 'ASR 错误'))
           setRecState('error')
         }
-        else setAsrMsg(msg || '')
       }
     )
 
