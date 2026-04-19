@@ -58,14 +58,11 @@
 
 ### Screenshots
 
-#### Recording Page (Idle)
+#### Recording Page
 ![Recording Page](images/record-page-idle.png)
 
-#### Recording Page (Active)
-![Recording Active](images/record-page-recording.png)
-
-#### Meeting Notes
-![Meeting Notes](images/meeting-notes.png)
+#### History Page
+![History Page](images/history-page.png)
 
 ---
 
