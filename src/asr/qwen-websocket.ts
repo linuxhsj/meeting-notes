@@ -59,13 +59,15 @@ export class QwenASR implements ASRProvider {
         this.ws = new WebSocket(ASR_WS_URL)
 
         this.ws.onopen = () => {
-          // 发送初始化请求（带说话人分离参数）
+          // 发送初始化请求（带认证 + 说话人分离参数）
           this.ws!.send(JSON.stringify({
             header: {
               appkey: 'audio-asr',
               algorithm: 'paraformer',
               version: '0.1.0',
               model: MODEL,
+              // Bearer Token 认证
+              authorization: `Bearer ${this.apiKey}`,
               // 说话人分离参数（行业默认值）
               enable_diarization: true,
               max_speaker_num: 8,

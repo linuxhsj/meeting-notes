@@ -22,6 +22,7 @@ export default function RecordPage() {
   const [speakerCount, setSpeakerCount] = useState(0)
   const [segmentCount, setSegmentCount] = useState(0)
   const [segments, setSegments] = useState<ASRSegment[]>([])
+  const [speakerIds, setSpeakerIds] = useState<Set<string>>(new Set())
   const [errorMsg, setErrorMsg] = useState('')
   const [asrMsg, setAsrMsg] = useState('')
   const transcriptRef = useRef<HTMLDivElement>(null)
@@ -37,6 +38,7 @@ export default function RecordPage() {
 
   const startRecording = useCallback(async () => {
     setSegments([])
+    setSpeakerIds(new Set())
     setElapsed(0)
     setSpeakerCount(0)
     setSegmentCount(0)
@@ -67,9 +69,11 @@ export default function RecordPage() {
         setSegments((prev) => [...prev, seg])
         setSegmentCount((n) => n + 1)
         // 更新说话人数量（去重）
-        setSpeakerCount((prev) => {
-          const speakerIds = new Set([...prev, seg.speakerId])
-          return speakerIds.size
+        setSpeakerIds((prev) => {
+          const newSet = new Set(prev)
+          newSet.add(seg.speakerId)
+          setSpeakerCount(newSet.size)
+          return newSet
         })
       },
       (state, msg) => {
