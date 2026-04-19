@@ -10,7 +10,10 @@ import {
   updateMeetingStatus,
   getInProgressMeeting,
 } from './store'
+import Store from 'electron-store'
 import { RecordingState } from './preload'
+
+const store = new Store()
 
 let currentWindow: BrowserWindow | null = null
 
